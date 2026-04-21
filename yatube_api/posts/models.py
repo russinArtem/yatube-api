@@ -57,15 +57,11 @@ class Follow(models.Model):
             ),
         ]
 
+    def __str__(self):
+        return f'{self.user.username} follows {self.following.username}'
+
     def clean(self):
         if self.user == self.following:
             raise ValidationError(
                 'Пользователь не может подписаться сам на себя.'
             )
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f'{self.user.username} follows {self.following.username}'

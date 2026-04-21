@@ -52,10 +52,10 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class FollowViewSet(
-    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin
+    viewsets.GenericViewSet,
 ):
     serializer_class = FollowSerializer
     filter_backends = [filters.SearchFilter]
