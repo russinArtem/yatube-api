@@ -1,10 +1,10 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, serializers, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 
 from .serializers import (
     CommentSerializer, FollowSerializer, GroupSerializer, PostSerializer)
-from posts.models import Follow, Group, Post, User
+from posts.models import Group, Post
 
 
 class IsAuthorOrReadOnly(permissions.BasePermission):
@@ -51,24 +51,18 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.save(post=self.get_post(), author=self.request.user)
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class FollowViewSet(
+    viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin
+):
     serializer_class = FollowSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['following__username']
 
     def get_queryset(self):
-        return Follow.objects.filter(user=self.request.user)
+        return self.request.user.subscriptions.all()
 
     def perform_create(self, serializer):
-        user = self.request.user
-        following_username = self.request.data.get('following')
-        if user.username == following_username:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя'
-            )
-        following_user = User.objects.get(username=following_username)
-        if Follow.objects.filter(user=user, following=following_user).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого автора'
-            )
-        serializer.save(user=user, following=following_user)
+        serializer.save(user=self.request.user)

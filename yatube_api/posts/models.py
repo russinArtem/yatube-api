@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 
 User = get_user_model()
@@ -25,6 +26,9 @@ class Post(models.Model):
         related_name='posts', blank=True, null=True
     )
 
+    class Meta:
+        ordering = ('-pub_date',)
+
     def __str__(self):
         return self.text[:100]
 
@@ -36,17 +40,32 @@ class Comment(models.Model):
         Post, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
     created = models.DateTimeField(
-        'Дата добавления', auto_now_add=True, db_index=True)
+        'Дата добавления', auto_now_add=True)
 
 
 class Follow(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='follower')
+        User, on_delete=models.CASCADE, related_name='subscriptions')
     following = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='following')
+        User, on_delete=models.CASCADE, related_name='followers')
 
     class Meta:
-        unique_together = ('user', 'following')
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'following'),
+                name='Unique subscription constraint',
+            ),
+        ]
+
+    def clean(self):
+        if self.user == self.following:
+            raise ValidationError(
+                'Пользователь не может подписаться сам на себя.'
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.user.username} follows {self.following.username}'[:50]
+        return f'{self.user.username} follows {self.following.username}'

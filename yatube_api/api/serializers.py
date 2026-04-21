@@ -42,6 +42,19 @@ class FollowSerializer(serializers.ModelSerializer):
         queryset=User.objects.all()
     )
 
+    def validate(self, attrs):
+        user = self.context['request'].user
+        following = attrs['following']
+        if user == following:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя'
+            )
+        if Follow.objects.filter(user=user, following=following).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора'
+            )
+        return attrs
+
     class Meta:
         model = Follow
         fields = '__all__'
